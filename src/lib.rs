@@ -31,13 +31,6 @@ fn platform_descriptor(os: Os, arch: Architecture) -> Option<PlatformDescriptor>
             binary_name: "urdf-language-server",
             make_executable: true,
         }),
-        (Os::Mac, Architecture::X8664) => Some(PlatformDescriptor {
-            target: "x86_64-apple-darwin",
-            archive_ext: "tar.gz",
-            download_type: DownloadedFileType::GzipTar,
-            binary_name: "urdf-language-server",
-            make_executable: true,
-        }),
         (Os::Linux, Architecture::X8664) => Some(PlatformDescriptor {
             target: "x86_64-unknown-linux-musl",
             archive_ext: "tar.gz",
