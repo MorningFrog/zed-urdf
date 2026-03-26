@@ -1,0 +1,146 @@
+name: Release URDF language server
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate versions and tag
+        id: version
+        shell: bash
+        run: |
+          python <<'PY'
+          import os
+          import sys
+
+          if sys.version_info < (3, 11):
+              print("Python 3.11+ is required for tomllib", file=sys.stderr)
+              sys.exit(1)
+
+          import tomllib
+
+          def read_version(path: str) -> str:
+              with open(path, "rb") as f:
+                  data = tomllib.load(f)
+              return data["package"]["version"]
+
+          def read_extension_version(path: str) -> str:
+              with open(path, "rb") as f:
+                  data = tomllib.load(f)
+              return data["version"]
+
+          root_cargo = read_version("Cargo.toml")
+          server_cargo = read_version("urdf-language-server/Cargo.toml")
+          extension_version = read_extension_version("extension.toml")
+
+          versions = {root_cargo, server_cargo, extension_version}
+          if len(versions) != 1:
+              print("Version mismatch detected among project files", file=sys.stderr)
+              sys.exit(1)
+
+          tag = os.environ["GITHUB_REF_NAME"]
+          expected_tag = f"v{root_cargo}"
+
+          print(f"Detected version: {root_cargo}")
+          print(f"Git tag: {tag}")
+          print(f"Expected tag: {expected_tag}")
+
+          if tag != expected_tag:
+              print("Git tag does not match project version", file=sys.stderr)
+              sys.exit(1)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"version={root_cargo}\n")
+              out.write(f"tag={tag}\n")
+
+          print("Validation passed.")
+          PY
+
+  build:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            archive_ext: tar.gz
+            binary_name: urdf-language-server
+          - os: macos-13
+            target: x86_64-apple-darwin
+            archive_ext: tar.gz
+            binary_name: urdf-language-server
+          - os: macos-14
+            target: aarch64-apple-darwin
+            archive_ext: tar.gz
+            binary_name: urdf-language-server
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive_ext: zip
+            binary_name: urdf-language-server.exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      - name: Build language server
+        shell: bash
+        run: |
+          cargo build \
+            --manifest-path urdf-language-server/Cargo.toml \
+            --release \
+            --target "${{ matrix.target }}"
+
+      - name: Package Unix asset
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p dist
+          cp "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "dist/${{ matrix.binary_name }}"
+          tar -C dist -czf "urdf-language-server-${{ needs.validate.outputs.tag }}-${{ matrix.target }}.tar.gz" "${{ matrix.binary_name }}"
+
+      - name: Package Windows asset
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "dist/${{ matrix.binary_name }}"
+          Compress-Archive -Path "dist/${{ matrix.binary_name }}" -DestinationPath "urdf-language-server-${{ needs.validate.outputs.tag }}-${{ matrix.target }}.zip"
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.validate.outputs.tag }}
+          files: urdf-language-server-${{ needs.validate.outputs.tag }}-${{ matrix.target }}.${{ matrix.archive_ext }}
+          generate_release_notes: true

@@ -118,7 +118,7 @@ impl LanguageServer for Backend {
         Ok(InitializeResult {
             server_info: Some(ServerInfo {
                 name: "urdf-language-server".to_string(),
-                version: Some("0.2.0".to_string()),
+                version: Some(env!("CARGO_PKG_VERSION").to_string()),
             }),
             capabilities: ServerCapabilities {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
@@ -474,11 +474,7 @@ fn current_tag_name(tag_region: &str) -> Option<String> {
 
     let name: String = stripped.chars().take_while(|c| is_name_char(*c)).collect();
 
-    if name.is_empty() {
-        None
-    } else {
-        Some(name)
-    }
+    if name.is_empty() { None } else { Some(name) }
 }
 
 /// Return the partially typed attribute name and the byte offset where it starts

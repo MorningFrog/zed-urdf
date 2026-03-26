@@ -1,6 +1,6 @@
 id = "urdf"
 name = "URDF"
-description = "URDF language support for Zed with syntax highlighting and completions."
+description = "URDF language support for Zed with syntax highlighting, outline, and completions."
 version = "0.1.0"
 schema_version = 1
 authors = ["MorningFrog <1098224028@qq.com>"]
@@ -8,7 +8,7 @@ repository = "https://github.com/MorningFrog/zed-urdf"
 
 [grammars.xml]
 repository = "https://github.com/tree-sitter-grammars/tree-sitter-xml"
-commit = "863dbc381f44f6c136a399e684383b977bb2beaa"
+rev = "863dbc381f44f6c136a399e684383b977bb2beaa"
 path = "xml"
 
 [language_servers.urdf-language-server]

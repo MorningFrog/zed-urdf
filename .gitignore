@@ -34,3 +34,4 @@ dist-ssr
 # Zed Extension Generated Files
 /grammars/
 *.wasm
+.zed-urdf

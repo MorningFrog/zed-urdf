@@ -1,0 +1,70 @@
+name: Check version sync
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check-version-sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check versions
+        shell: bash
+        run: |
+          python <<'PY'
+          import os
+          import pathlib
+          import sys
+
+          if sys.version_info < (3, 11):
+              print("Python 3.11+ is required for tomllib", file=sys.stderr)
+              sys.exit(1)
+
+          import tomllib
+
+          def read_version(path: str) -> str:
+              with open(path, "rb") as f:
+                  data = tomllib.load(f)
+              return data["package"]["version"]
+
+          def read_extension_version(path: str) -> str:
+              with open(path, "rb") as f:
+                  data = tomllib.load(f)
+              return data["version"]
+
+          root_cargo = read_version("Cargo.toml")
+          server_cargo = read_version("urdf-language-server/Cargo.toml")
+          extension_version = read_extension_version("extension.toml")
+
+          print(f"root Cargo.toml version: {root_cargo}")
+          print(f"server Cargo.toml version: {server_cargo}")
+          print(f"extension.toml version: {extension_version}")
+
+          versions = {root_cargo, server_cargo, extension_version}
+          if len(versions) != 1:
+              print("Version mismatch detected among Cargo.toml, urdf-language-server/Cargo.toml, and extension.toml", file=sys.stderr)
+              sys.exit(1)
+
+          github_ref_type = os.environ.get("GITHUB_REF_TYPE", "")
+          github_ref_name = os.environ.get("GITHUB_REF_NAME", "")
+
+          if github_ref_type == "tag":
+              expected_tag = f"v{root_cargo}"
+              print(f"tag: {github_ref_name}")
+              print(f"expected tag: {expected_tag}")
+              if github_ref_name != expected_tag:
+                  print("Tag does not match version", file=sys.stderr)
+                  sys.exit(1)
+
+          print("Version sync check passed.")
+          PY
