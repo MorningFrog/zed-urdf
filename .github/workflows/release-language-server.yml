@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Validate versions and tag
         id: version
@@ -82,10 +82,6 @@ jobs:
             target: x86_64-unknown-linux-musl
             archive_ext: tar.gz
             binary_name: urdf-language-server
-          - os: macos-13
-            target: x86_64-apple-darwin
-            archive_ext: tar.gz
-            binary_name: urdf-language-server
           - os: macos-14
             target: aarch64-apple-darwin
             archive_ext: tar.gz
@@ -99,7 +95,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -127,7 +123,7 @@ jobs:
         run: |
           set -euxo pipefail
           mkdir -p dist
-          cp "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "dist/${{ matrix.binary_name }}"
+          cp "urdf-language-server/target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "dist/${{ matrix.binary_name }}"
           tar -C dist -czf "urdf-language-server-${{ needs.validate.outputs.tag }}-${{ matrix.target }}.tar.gz" "${{ matrix.binary_name }}"
 
       - name: Package Windows asset
@@ -135,7 +131,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          Copy-Item "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "dist/${{ matrix.binary_name }}"
+          Copy-Item "urdf-language-server/target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "dist/${{ matrix.binary_name }}"
           Compress-Archive -Path "dist/${{ matrix.binary_name }}" -DestinationPath "urdf-language-server-${{ needs.validate.outputs.tag }}-${{ matrix.target }}.zip"
 
       - name: Upload release asset
