@@ -147,3 +147,7 @@ This project builds on and draws inspiration from:
 * [sweetppro/zed-xml](https://github.com/sweetppro/zed-xml)
 
 Many thanks to the maintainers and contributors of those projects.
+
+## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
